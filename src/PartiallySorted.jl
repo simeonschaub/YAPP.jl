@@ -1,21 +1,19 @@
 struct PartiallySorted{T, A <: AbstractVector{<:AbstractVector{T}}, F}
     classes::A
-    length::Int
-    get_class::F # T -> Int
 end
 
-Base.length(x::PartiallySorted) = x.length
+Base.HasLength(::PartiallySorted) = Base.SizeUnknown()
 Base.eltype(::Type{<:PartiallySorted{T}}) where {T} = T
 Base.keytype(::Type{<:PartiallySorted}) = NTuple{2, Int}
 Base.@propagate_inbounds function Base.getindex(x::PartiallySorted, (class, i)::NTuple{2, Int})
     return x.classes[class][i]
 end
 Base.@propagate_inbounds function Base.setindex!(x::PartiallySorted, e, (class, i)::NTuple{2, Int})
-    return x.classes[class][i] = e
+    x.classes[class][i] = e
+    return x
 end
-function Base.push!(x::PartiallySorted, e)
+function Base.push!(x::PartiallySorted, e, class::Int)
     classes = x.classes
-    class = x.get_class(e)
     if class > lastindex(classes)
         resize!(classes, length(classes) + class - lastindex(classes))
     end
@@ -25,35 +23,38 @@ function Base.push!(x::PartiallySorted, e)
         entries = eltype(classes)()
         classes[class] = entries
     end
-    return push!(entries, e)
+    push!(entries, e)
+    return x
 end
+Base.deleteat!(x::PartiallySorted, (class, i)::Tuple{Int, Any}) = deleteat!(x.classes[class], i)
 
+class_in(classes) = class -> isassigned(classes, class) && !isempty(classes[class])
 function Base.firstindex(x::PartiallySorted)
     classes = x.classes
-    class = findfirst(i -> isassigned(classes, i), eachindex(classes))
+    class = findfirst(class_in(classes), eachindex(classes))
     class === nothing && return lastindex(classes) + 1, 0
     return class, firstindex(classes[class])
 end
 function Base.lastindex(x::PartiallySorted)
     classes = x.classes
-    class = findlast(i -> isassigned(classes, i), eachindex(classes))
+    class = findlast(class_in(classes), eachindex(classes))
     class === nothing && return firstindex(classes) - 1, 0
     return class, lastindex(classes[class])
 end
 function Base.nextind(x::PartiallySorted, (class, i)::NTuple{2, Int})
     classes = x.classes
     i < lastindex(classes[class]) && return class, i + 1
-    class′ = findnext(i -> isassigned(classes, i), eachindex(classes), class)
+    class′ = findnext(class_in(classes), eachindex(classes), class)
     class′ === nothing &&
-        error("No index after $((class, i)) in $(x.length)-element $(typeof(x))")
+        error("No index after $((class, i)) in $(typeof(x))")
     return class′, firstindex(classes[class′])
 end
 function Base.prevind(x::PartiallySorted, (class, i)::NTuple{2, Int})
     classes = x.classes
     i > firstindex(classes[class]) && return class, i - 1
-    class′ = findprev(i -> isassigned(classes, i), eachindex(classes), class)
+    class′ = findprev(class_in(classes), eachindex(classes), class)
     class′ === nothing &&
-        error("No index before $((class, i)) in $(x.length)-element $(typeof(x))")
+        error("No index before $((class, i)) in $(typeof(x))")
     return class′, lastindex(classes[class′])
 end
 

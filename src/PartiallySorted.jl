@@ -13,7 +13,7 @@ Base.@propagate_inbounds function Base.setindex!(x::PartiallySorted, e, (class, 
     x.classes[class][i] = e
     return x
 end
-function _push!(x::PartiallySorted, e, class::Int)
+function _entries!(x::PartiallySorted, class::Int)
     classes = x.classes
     if class > lastindex(classes)
         resize!(classes, length(classes) + class - lastindex(classes))
@@ -21,9 +21,13 @@ function _push!(x::PartiallySorted, e, class::Int)
     if isassigned(classes, class)
         entries = classes[class]
     else
-        entries = eltype(classes)()
+        entries = similar(eltype(classes), 0)
         classes[class] = entries
     end
+    return entries
+end
+function _push!(x::PartiallySorted, e, class::Int)
+    entries = _entries!(x, class)
     push!(entries, e)
     return class, lastindex(entries)
 end
@@ -67,13 +71,24 @@ function Base.iterate(
 )
     return idx < first_idx ? nothing : (x.itr[idx], (prevind(x.itr, idx), first_idx))
 end
-    
+
+
+function Base.similar(x::PartiallySorted, ::Type{T}) where {T}
+    classes = x.classes
+    classes′ = similar(classes, Vector{T})
+    @inbounds for class in eachindex(classes)
+        isassigned(classes, class) || continue
+        classes′[class] = Vector{T}(undef, length(classes[class]))
+    end
+    return PartiallySorted(classes′)
+end
 
 struct EachIndex{T}
     s::T
 end
 Base.keys(s::PartiallySorted) = EachIndex(s)
 
+Base.IteratorSize(e::EachIndex) = Base.IteratorSize(e.s)
 Base.length(e::EachIndex) = length(e.s)
 Base.first(e::EachIndex) = firstindex(e.s)
 Base.last(e::EachIndex) = lastindex(e.s)

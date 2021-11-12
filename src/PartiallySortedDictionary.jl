@@ -46,6 +46,7 @@ end
 
 Dictionaries.isinsertable(::PartiallySortedDictionary) = true
 
+# inspired by https://github.com/JuliaFolds/BangBang.jl/blob/6e7260cd6b23fd806e4c4b93520d7327add08593/src/extras.jl#L96
 function Dictionaries.gettoken(x::PartiallySortedIndices{T}, key::T) where {T}
     ht = x.indices
     # Ideally, to improve performance for the case that requires

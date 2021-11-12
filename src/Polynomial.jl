@@ -37,6 +37,14 @@ end
 
 const PolynomialLike = Union{Polynomial, TermLike}
 
+function (p::PolynomialLike)(xs)
+    return sum(terms(p)) do t
+        coefficient(t) * prod(zip(xs, exponents(t))) do (x, e)
+            x^e
+        end
+    end
+end
+
 function add!(p::Polynomial, t::TermLike)
     coeffs = p.coeffs
     hadindex, token = gettoken!(coeffs, monomial(t))

@@ -83,12 +83,13 @@ function Base.similar(x::PartiallySorted, ::Type{T}) where {T}
     return PartiallySorted(classes′)
 end
 
-function Base.copy(x::PartiallySorted{<:Any, <:AbstractVector{A}}) where {A}
+function Base.copy(x::PartiallySorted{T}, ::Type{T′}=T) where {T, T′}
     classes = x.classes
-    classes′ = similar(classes, A)
+    classes′ = similar(classes, Vector{T′})
     @inbounds for class in eachindex(classes)
         isassigned(classes, class) || continue
-        classes′[class] = copy(classes[class])
+        entries = classes[class]
+        classes′[class] = copyto!(similar(entries, T′), entries)
     end
     return PartiallySorted(classes′)
 end

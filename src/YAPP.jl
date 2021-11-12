@@ -1,6 +1,6 @@
 module YAPP
 
-using Dictionaries, MultivariatePolynomials, BangBang
+using Dictionaries, MultivariatePolynomials, BangBang, LinearAlgebra
 
 include("PartiallySorted.jl")
 include("PartiallySortedDictionary.jl")

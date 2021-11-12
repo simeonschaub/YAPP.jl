@@ -111,3 +111,6 @@ end
 function Base.similar(x::PartiallySortedIndices, ::Type{V}) where {V}
     return PartiallySortedDictionary(x, similar(x.values, V))
 end
+function Base.copy(x::PartiallySortedIndices)
+    return PartiallySortedIndices(copy(x.indices), copy(x.values), x.get_class)
+end

@@ -160,10 +160,10 @@ function +ₘ(t1::NTuple{N, T1}, t2::NTuple{M, T2}) where {N, M, T1, T2}
     T = promote_type(t1, t2)
     return ntuple(i -> convert(T, get(t1, i, false) + get(t1, i, false)), max(N, M))
 end
-+ₘ(t1::NTuple{N, T1}, t2::Tuple...) where {N, T1} = Base.afoldl(+ₘ, t1, t2)
++ₘ(t1::NTuple{N, T1}, t2::Tuple...) where {N, T1} = Base.afoldl(+ₘ, t1, t2...)
 function +ₘ(c1, cs...)
     return Base.promote_eltype(c1, cs...)[
-        +(get(c1, i, false), get.(cs, i, false)...)
+        +(get(c1, i, false), map(c -> get(c, i, false), cs)...)
         for i in minimum(firstindex, (c1, cs...)):maximum(lastindex, (c1, cs...))
     ]
 end

@@ -164,7 +164,7 @@ end
 function +ₘ(c1, cs...)
     return Base.promote_eltype(c1, cs...)[
         +(get(c1, i, false), map(c -> get(c, i, false), cs)...)
-        for i in minimum(firstindex, (c1, cs...)):maximum(lastindex, (c1, cs...))
+        for i in 1:maximum(lastindex, (c1, cs...))
     ]
 end
 

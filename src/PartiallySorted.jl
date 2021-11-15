@@ -82,7 +82,6 @@ function Base.similar(x::PartiallySorted, ::Type{T}) where {T}
     end
     return PartiallySorted(classes′)
 end
-
 function Base.copy(x::PartiallySorted{T}, ::Type{T′}=T) where {T, T′}
     classes = x.classes
     classes′ = similar(classes, Vector{T′})
@@ -93,6 +92,7 @@ function Base.copy(x::PartiallySorted{T}, ::Type{T′}=T) where {T, T′}
     end
     return PartiallySorted(classes′)
 end
+Base.empty!(x::PartiallySorted) = (empty!(x.classes); x)
 
 struct EachIndex{T}
     s::T

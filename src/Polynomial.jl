@@ -125,6 +125,7 @@ Polynomial{C}() where {C} = Polynomial{C, Monomial{Vector{Int}}}()
 MultivariatePolynomials.terms(p::Polynomial) = (Term(c, m) for (m, c) in pairs(Iterators.reverse(p.coeffs)))
 MultivariatePolynomials.monomialtype(::Type{<:Polynomial{<:Any, M}}) where {M} = M
 MultivariatePolynomials.monomialtype(::P) where {P <: Polynomial} = monomialtype(P)
+Base.:(==)(p1::Polynomial, p2::Polynomial) = issetequal(p1.coeffs, p2.coeffs)
 
 function Base.copy(p::Polynomial{C}, ::Type{C′}=C) where {C, C′}
     coeffs = p.coeffs
@@ -205,7 +206,7 @@ function Base.:+(p1::TermLike, ps::PolynomialLike...)
     return foldl(add!, (p1, ps...); init=Polynomial{C′, M′}())
 end
 
-LinearAlgebra.rmul!(p::Polynomial, α::Number) = (map!(x -> x * α, p.coeffs); p)
+LinearAlgebra.rmul!(p::Polynomial, α::Number) = (p.coeffs .*= α; p)
 function BangBang.rmul!!(p::Polynomial{C}, α::T) where {C, T <: Number}
     C′ = promote_type(C, T)
     if !(C′ <: C)
@@ -213,6 +214,8 @@ function BangBang.rmul!!(p::Polynomial{C}, α::T) where {C, T <: Number}
     end
     return rmul!(p, α)
 end
+Base.:*(t::TermLike, α::Number) = Term(coefficient(t) * α, monomial(t))
+Base.:*(α::Number, t::TermLike) = Term(α * coefficient(t), monomial(t))
 function Base.:*(p::Polynomial{C}, α::T) where {C, T <: Number}
     C′ = promote_type(C, T)
     return rmul!(copy(p, C′), α)
@@ -222,7 +225,7 @@ function Base.:*(α::T, p::Polynomial{C}) where {C, T <: Number}
     return rmul!(copy(p, C′), α)
 end
 
-Base.:*(m1::Monomial, ms::Monomial...) = Monomial(.+ₘ(exponents(m1), exponents.(ms)...))
+Base.:*(m1::Monomial, ms::Monomial...) = Monomial(+ₘ(exponents(m1), exponents.(ms)...))
 function Base.:*(t1::TermLike, ts::TermLike...)
     return Term(*(coefficient(t1), coefficient.(ts)...), *(monomial(t1), monomial.(ts)...))
 end
@@ -232,6 +235,25 @@ function Base.:*(p1::PolynomialLike, ps::PolynomialLike...)
     p = Polynomial{C′, M′}()
     for terms in Iterators.product(terms.((p1, ps...))...)
         add!(p, *(terms...))
+    end
+    return p
+end
+function LinearAlgebra.mul!(
+    p::Polynomial,
+    p1::PolynomialLike,
+    p2::PolynomialLike,
+    α::Number,
+    β::Number,
+    ps::PolynomialLike...,
+)
+    if iszero(β)
+        empty!(p.coeffs)
+    elseif !isone(β)
+        rmul!(p.coeffs, β)
+    end
+    iszero(α) && return p
+    for terms in Iterators.product(terms.((p1, p2, ps...))...)
+        add!(p, *(terms...) * α)
     end
     return p
 end

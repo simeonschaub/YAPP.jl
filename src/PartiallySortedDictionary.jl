@@ -11,6 +11,12 @@ Base.iterate(x::PartiallySortedIndices, state...) = iterate(x.values, state...)
 function Base.iterate(x::ReverseIndices{<:Any, <:PartiallySortedIndices}, state...)
     return iterate(Iterators.reverse(x.inds.values), state...)
 end
+function Dictionaries.iteratetoken(x::PartiallySortedIndices, state...)
+    tmp = iterate(x.values, state...)
+    tmp === nothing && return nothing
+    i, state′ = tmp
+    return gettoken(x, i)[2], state′
+end
 Base.in(i::T, x::PartiallySortedIndices{T}) where {T} = haskey(x.indices, i)
 Base.length(x::PartiallySortedIndices) = length(x.indices)
 
@@ -114,4 +120,9 @@ function Base.similar(x::PartiallySortedIndices, ::Type{V}) where {V}
 end
 function Base.copy(x::PartiallySortedIndices)
     return PartiallySortedIndices(copy(x.indices), copy(x.values), x.get_class)
+end
+function Base.empty!(x::PartiallySortedDictOrIndices)
+    empty!(x.indices)
+    empty!(x.values)
+    return x
 end

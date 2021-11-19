@@ -169,17 +169,22 @@ function +ₘ(c1, cs...)
     ]
 end
 
-function add!(p::Polynomial, t::TermLike)
-    coeffs = p.coeffs
+function add!(p::Polynomial, t::TermLike; delete_zeros=true)
+    coeffs, t_coeff = p.coeffs, coefficient(t)
     hadindex, token = gettoken!(coeffs, monomial(t))
     if hadindex
-        settokenvalue!(coeffs, token, gettokenvalue(coeffs, token) + coefficient(t))
+        coeff′ = gettokenvalue(coeffs, token) + t_coeff
     else
-        settokenvalue!(coeffs, token, coefficient(t))
+        coeff′ = t_coeff
+    end
+    if delete_zeros && iszero(coeff′)
+        deletetoken!(coeffs, token)
+    else
+        settokenvalue!(coeffs, token, coeff′)
     end
     return p
 end
-add!(p1::Polynomial, p2::Polynomial) = (mergewith!(+, p1.coeffs, p2.coeffs); p1)
+add!(p1::Polynomial, p2::Polynomial) = (foldl(add!, terms(p2); init=p1); p1)
 function BangBang.add!!(p1::Polynomial{C, M}, p2::PolynomialLike) where {C, M}
     C′ = promote_type(C, coefficienttype(p2))
     M′ = promote_monomial_type(p1, p2)

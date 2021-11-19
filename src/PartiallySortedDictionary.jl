@@ -53,31 +53,32 @@ end
 Dictionaries.isinsertable(::PartiallySortedDictionary) = true
 
 # inspired by https://github.com/JuliaFolds/BangBang.jl/blob/6e7260cd6b23fd806e4c4b93520d7327add08593/src/extras.jl#L96
-function Dictionaries.gettoken(x::PartiallySortedIndices{T}, key::T) where {T}
+function Dictionaries.gettoken(x::PartiallySortedIndices{T}, key::T; ht_keyindex=Base.ht_keyindex) where {T}
     ht = x.indices
     # Ideally, to improve performance for the case that requires
     # resizing, we should use something like `ht_keyindex` while
     # keeping computed hash value and then do something like
     # `ht_keyindex2!` if `f` returns non-`nothing`.
-    keyindex = Base.ht_keyindex2!(ht, key)
+    keyindex = ht_keyindex(ht, key)
 
-    age0 = ht.age
     hadindex = keyindex > 0
     idx = hadindex ? @inbounds(ht.vals[keyindex]) : (0, 0)
-    if ht.age != age0
-        keyindex = Base.ht_keyindex2!(ht, key)
-    end
     return hadindex, (keyindex, idx)
 end
 function Dictionaries.gettoken!(x::PartiallySortedIndices{T}, key::T) where {T}
-    hadindex, (keyindex, idx) = gettoken(x, key)
+    hadindex, (keyindex, idx) = gettoken(x, key; ht_keyindex=Base.ht_keyindex2!)
     ht = x.indices
+    age0 = ht.age
     if !hadindex
         keys = x.values
         class = x.get_class(key)
 
         idx = _push!(keys, key, class)
         @inbounds Base._setindex!(ht, idx, key, -keyindex)
+        if ht.age != age0
+            keyindex = Base.ht_keyindex2!(ht, key)
+        end
+        ht.age += 1
     end
     return hadindex, (keyindex, idx)
 end
@@ -103,10 +104,17 @@ function Dictionaries.settokenvalue!(
 ) where {K, V}
     return @inbounds x.values[idx] = value
 end
-function Dictionaries.deletetoken!(x::PartiallySortedIndices, (keyindex, idx))
+function Dictionaries.deletetoken!(x::PartiallySortedIndices, (keyindex, (class, i)))
     ht = x.indices
     Base._delete!(ht, keyindex)
-    deleteat!(x.values, idx)
+    deleteat!(x.values, (class, i))
+    classes = x.values.classes
+    class_in(classes)(class) || return x
+    entries = @inbounds classes[class]
+    for i in i:lastindex(entries)
+        key = @inbounds entries[i]
+        @inbounds ht[key] = (class, i)
+    end
     return x
 end
 function Dictionaries.deletetoken!(x::PartiallySortedDictionary, (keyindex, idx))

@@ -78,7 +78,6 @@ function Dictionaries.gettoken!(x::PartiallySortedIndices{T}, key::T) where {T}
         if ht.age != age0
             keyindex = Base.ht_keyindex2!(ht, key)
         end
-        ht.age += 1
     end
     return hadindex, (keyindex, idx)
 end
